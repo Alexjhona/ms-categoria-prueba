@@ -2,11 +2,15 @@ package com.example.ms_categoria.util;
 
 import com.example.ms_categoria.entity.Categoria;
 import com.example.ms_categoria.repository.CategoriaRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
 @Component
 public class CategoriaSeeder implements CommandLineRunner {
+
+    private static final Logger logger = LoggerFactory.getLogger(CategoriaSeeder.class);
 
     private final CategoriaRepository categoriaRepository;
 
@@ -80,9 +84,9 @@ public class CategoriaSeeder implements CommandLineRunner {
             categoriaRepository.save(cat29);
             categoriaRepository.save(cat30);
 
-            System.out.println("Datos de categorías insertados correctamente.");
+            logger.info("Datos de categorías insertados correctamente.");
         } else {
-            System.out.println("Las categorías ya existen, no se insertaron datos.");
+            logger.info("Las categorías ya existen, no se insertaron datos.");
         }
     }
 }
