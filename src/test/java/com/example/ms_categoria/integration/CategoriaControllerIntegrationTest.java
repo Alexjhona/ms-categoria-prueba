@@ -4,10 +4,10 @@ import com.example.ms_categoria.dto.CategoriaDto;
 import com.example.ms_categoria.repository.CategoriaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 
@@ -19,10 +19,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-@DisplayName("Pruebas de integración - CategoriaController")
+@DisplayName("Pruebas de integracion - CategoriaController")
 class CategoriaControllerIntegrationTest extends BaseIntegrationTest {
 
     @Autowired
@@ -35,7 +36,7 @@ class CategoriaControllerIntegrationTest extends BaseIntegrationTest {
 
     @Order(1)
     @Test
-    @DisplayName("POST /api/categorias - crea categoría y retorna HTTP 200")
+    @DisplayName("POST /api/categorias - crea categoria y retorna HTTP 200")
     void crearCategoria_RetornaOk() throws Exception {
         CategoriaDto dto = new CategoriaDto(null, "Cables HDMI");
 
@@ -49,7 +50,22 @@ class CategoriaControllerIntegrationTest extends BaseIntegrationTest {
 
     @Order(2)
     @Test
-    @DisplayName("GET /api/categorias - retorna lista de categorías")
+    @DisplayName("POST /api/categorias - rechaza nombre vacio")
+    void crearCategoria_NombreVacio_RetornaBadRequest() throws Exception {
+        CategoriaDto dto = new CategoriaDto(null, "");
+
+        mockMvc.perform(post("/api/categorias")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status", is(400)))
+                .andExpect(jsonPath("$.error", is("Validación fallida")))
+                .andExpect(jsonPath("$.mensajes.nombre", is("Campo obligatorio")));
+    }
+
+    @Order(3)
+    @Test
+    @DisplayName("GET /api/categorias - retorna lista de categorias")
     void listarCategorias_RetornaLista() throws Exception {
         CategoriaDto dto = new CategoriaDto(null, "Adaptadores USB");
 
@@ -66,9 +82,9 @@ class CategoriaControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(jsonPath("$[0].nombre", is("Adaptadores USB")));
     }
 
-    @Order(3)
+    @Order(4)
     @Test
-    @DisplayName("GET /api/categorias/{id} - retorna categoría existente")
+    @DisplayName("GET /api/categorias/{id} - retorna categoria existente")
     void obtenerCategoria_RetornaCategoria() throws Exception {
         CategoriaDto dto = new CategoriaDto(null, "Mouse Gaming");
 
@@ -89,9 +105,9 @@ class CategoriaControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(jsonPath("$.nombre", is("Mouse Gaming")));
     }
 
-    @Order(4)
+    @Order(5)
     @Test
-    @DisplayName("PUT /api/categorias/{id} - actualiza categoría")
+    @DisplayName("PUT /api/categorias/{id} - actualiza categoria")
     void actualizarCategoria_RetornaCategoriaActualizada() throws Exception {
         CategoriaDto dto = new CategoriaDto(null, "Nombre Inicial");
 
@@ -115,11 +131,37 @@ class CategoriaControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(jsonPath("$.nombre", is("Nombre Actualizado")));
     }
 
-    @Order(5)
+    @Order(6)
     @Test
-    @DisplayName("DELETE /api/categorias/{id} - elimina categoría")
+    @DisplayName("PUT /api/categorias/{id} - rechaza nombre nulo")
+    void actualizarCategoria_NombreNulo_RetornaBadRequest() throws Exception {
+        CategoriaDto dto = new CategoriaDto(null, "Nombre Inicial");
+
+        String respuesta = mockMvc.perform(post("/api/categorias")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        CategoriaDto creada = objectMapper.readValue(respuesta, CategoriaDto.class);
+        CategoriaDto dtoActualizado = new CategoriaDto(null, null);
+
+        mockMvc.perform(put("/api/categorias/{id}", creada.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dtoActualizado)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status", is(400)))
+                .andExpect(jsonPath("$.error", is("Validación fallida")))
+                .andExpect(jsonPath("$.mensajes.nombre", is("Campo obligatorio")));
+    }
+
+    @Order(7)
+    @Test
+    @DisplayName("DELETE /api/categorias/{id} - elimina categoria")
     void eliminarCategoria_RetornaNoContent() throws Exception {
-        CategoriaDto dto = new CategoriaDto(null, "Categoría Temporal");
+        CategoriaDto dto = new CategoriaDto(null, "Categoria Temporal");
 
         String respuesta = mockMvc.perform(post("/api/categorias")
                         .contentType(MediaType.APPLICATION_JSON)

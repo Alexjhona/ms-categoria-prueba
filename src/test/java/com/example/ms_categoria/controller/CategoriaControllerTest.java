@@ -1,6 +1,7 @@
 package com.example.ms_categoria.controller;
 
 import com.example.ms_categoria.dto.CategoriaDto;
+import com.example.ms_categoria.exception.GlobalExceptionHandler;
 import com.example.ms_categoria.service.CategoriaService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,7 +34,9 @@ class CategoriaControllerTest {
     void setUp() {
         categoriaService = Mockito.mock(CategoriaService.class);
         CategoriaController categoriaController = new CategoriaController(categoriaService);
-        mockMvc = MockMvcBuilders.standaloneSetup(categoriaController).build();
+        mockMvc = MockMvcBuilders.standaloneSetup(categoriaController)
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
         objectMapper = new ObjectMapper();
     }
 
@@ -53,6 +56,22 @@ class CategoriaControllerTest {
                 .andExpect(jsonPath("$.nombre").value("Cables USB"));
 
         verify(categoriaService).crearCategoria(Mockito.any(CategoriaDto.class));
+    }
+
+    @Test
+    @DisplayName("POST /api/categorias - rechaza nombre vacio")
+    void crearCategoria_NombreVacio_DebeRetornarBadRequest() throws Exception {
+        CategoriaDto entrada = new CategoriaDto(null, "");
+
+        mockMvc.perform(post("/api/categorias")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(entrada)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Validación fallida"))
+                .andExpect(jsonPath("$.mensajes.nombre").value("Campo obligatorio"));
+
+        Mockito.verifyNoInteractions(categoriaService);
     }
 
     @Test
@@ -105,6 +124,22 @@ class CategoriaControllerTest {
                 .andExpect(jsonPath("$.nombre").value("Nombre Nuevo"));
 
         verify(categoriaService).actualizarCategoria(Mockito.eq(1L), Mockito.any(CategoriaDto.class));
+    }
+
+    @Test
+    @DisplayName("PUT /api/categorias/{id} - rechaza nombre nulo")
+    void actualizarCategoria_NombreNulo_DebeRetornarBadRequest() throws Exception {
+        CategoriaDto entrada = new CategoriaDto(null, null);
+
+        mockMvc.perform(put("/api/categorias/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(entrada)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Validación fallida"))
+                .andExpect(jsonPath("$.mensajes.nombre").value("Campo obligatorio"));
+
+        Mockito.verifyNoInteractions(categoriaService);
     }
 
     @Test

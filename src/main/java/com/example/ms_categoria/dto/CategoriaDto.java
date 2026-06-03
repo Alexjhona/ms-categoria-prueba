@@ -1,7 +1,11 @@
 package com.example.ms_categoria.dto;
 
+import jakarta.validation.constraints.NotBlank;
+
 public class CategoriaDto {
     private Long id;
+
+    @NotBlank(message = "Campo obligatorio")
     private String nombre;
 
     public CategoriaDto() {
