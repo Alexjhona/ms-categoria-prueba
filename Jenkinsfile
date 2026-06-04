@@ -1,7 +1,3 @@
-pipeline {
-agent any
-
-```
 environment {
     PROJECT_KEY = 'ms-categoria-prueba'
     PROJECT_NAME = 'ms-categoria-prueba'
@@ -123,7 +119,4 @@ post {
     failure {
         echo 'El pipeline falló. Revisar Console Output para identificar la etapa exacta.'
     }
-}
-```
-
 }
