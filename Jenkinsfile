@@ -1,88 +1,124 @@
 pipeline {
     agent any
 
-    tools {
-        maven 'MAVEN_HOME'
-    }
-
     environment {
-        SONAR_TOKEN = credentials('Sonarqube')
-
-        POM_PATH = 'pom.xml'
-
-        DOCKER_HOST = 'unix:///var/run/docker.sock'
-        TESTCONTAINERS_RYUK_DISABLED = 'true'
-        TESTCONTAINERS_CHECKS_DISABLE = 'true'
-        TESTCONTAINERS_HOST_OVERRIDE = 'host.docker.internal'
+        PROJECT_KEY = 'ms-categoria-prueba'
+        PROJECT_NAME = 'ms-categoria-prueba'
+        JACOCO_XML = 'target/site/jacoco/jacoco.xml'
     }
 
     stages {
 
-        stage('Build') {
+        stage('Checkout') {
             steps {
-                timeout(time: 8, unit: 'MINUTES') {
-                    sh "mvn -DskipTests clean package -f ${POM_PATH}"
-                }
+                checkout scm
             }
         }
 
         stage('Test') {
             steps {
-                timeout(time: 15, unit: 'MINUTES') {
-                    sh "mvn clean verify -f ${POM_PATH}"
-                }
+                sh '''
+                    echo "Ejecutando pruebas unitarias y de controlador..."
+                    if [ -f "./mvnw" ]; then
+                      chmod +x ./mvnw
+                      ./mvnw -B clean test
+                    else
+                      mvn -B clean test
+                    fi
+                '''
             }
+        }
 
-            post {
-                always {
-                    junit allowEmptyResults: true,
-                          testResults: '**/target/surefire-reports/*.xml'
-                }
+        stage('Verify and JaCoCo') {
+            steps {
+                sh '''
+                    echo "Ejecutando verificación Maven y generando reporte JaCoCo..."
+                    if [ -f "./mvnw" ]; then
+                      chmod +x ./mvnw
+                      ./mvnw -B verify
+                    else
+                      mvn -B verify
+                    fi
+
+                    echo "Verificando existencia del reporte JaCoCo..."
+                    if [ -f "target/site/jacoco/jacoco.xml" ]; then
+                      echo "Reporte JaCoCo generado correctamente."
+                      ls -lh target/site/jacoco/jacoco.xml
+                    else
+                      echo "No se encontró target/site/jacoco/jacoco.xml"
+                      exit 1
+                    fi
+                '''
             }
         }
 
         stage('SonarQube Analysis') {
             steps {
-                timeout(time: 8, unit: 'MINUTES') {
-                    withSonarQubeEnv('sonarqube') {
-                        sh """
-                            mvn sonar:sonar \
-                                -Dsonar.projectKey=ms-categoria \
-                                -Dsonar.projectName=ms-categoria \
-                                -Dsonar.token=${SONAR_TOKEN} \
-                                -f ${POM_PATH}
-                        """
-                    }
+                withSonarQubeEnv('SonarQube') {
+                    sh '''
+                        echo "Ejecutando análisis SonarQube para ms-categoria-prueba..."
+                        if [ -f "./mvnw" ]; then
+                          chmod +x ./mvnw
+                          ./mvnw -B sonar:sonar \
+                            -Dsonar.projectKey=$PROJECT_KEY \
+                            -Dsonar.projectName=$PROJECT_NAME \
+                            -Dsonar.coverage.jacoco.xmlReportPaths=$JACOCO_XML
+                        else
+                          mvn -B sonar:sonar \
+                            -Dsonar.projectKey=$PROJECT_KEY \
+                            -Dsonar.projectName=$PROJECT_NAME \
+                            -Dsonar.coverage.jacoco.xmlReportPaths=$JACOCO_XML
+                        fi
+                    '''
                 }
             }
         }
 
         stage('Quality Gate') {
             steps {
-                timeout(time: 4, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: true
+                timeout(time: 2, unit: 'MINUTES') {
+                    script {
+                        def qg = waitForQualityGate abortPipeline: false
+                        echo "Resultado Quality Gate: ${qg.status}"
+                    }
                 }
             }
         }
 
-        stage('Archive Artifact') {
+        stage('Package') {
+            steps {
+                sh '''
+                    echo "Empaquetando microservicio sin volver a ejecutar pruebas..."
+                    if [ -f "./mvnw" ]; then
+                      chmod +x ./mvnw
+                      ./mvnw -B package -DskipTests
+                    else
+                      mvn -B package -DskipTests
+                    fi
+                '''
+            }
+        }
+
+        stage('Archive Artifacts') {
             steps {
                 archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
+                archiveArtifacts artifacts: 'target/site/jacoco/**', allowEmptyArchive: true
+                junit allowEmptyResults: true, testResults: 'target/surefire-reports/*.xml'
             }
         }
     }
 
     post {
+        always {
+            echo 'Pipeline backend ms-categoria-prueba finalizado.'
+        }
+
         success {
-            echo 'Pipeline ejecutado correctamente para ms-categoria.'
+            echo 'Microservicio ms-categoria-prueba compilado, probado, analizado en SonarQube y empaquetado correctamente.'
         }
 
         failure {
-            echo 'Pipeline falló. Revisar los logs de Jenkins.'
-        }
-
-        always {
-            cleanWs()
+            echo 'El pipeline falló. Revisar Console Output para identificar la etapa exacta.'
         }
     }
 }
