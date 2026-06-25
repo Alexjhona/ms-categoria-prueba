@@ -23,7 +23,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 )
 @AutoConfigureMockMvc
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@ActiveProfiles("tc")
+@ActiveProfiles("test")
 public abstract class BaseIntegrationTest {
 
     @DynamicPropertySource

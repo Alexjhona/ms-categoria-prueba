@@ -28,7 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
         "eureka.client.fetch-registry=false"
 })
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@ActiveProfiles("tc")
+@ActiveProfiles("test")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @DisplayName("Pruebas de integración - CategoriaRepository con MySQL real")
 class CategoriaRepositoryIntegrationTest {

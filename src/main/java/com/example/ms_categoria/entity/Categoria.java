@@ -14,12 +14,22 @@ public class Categoria {
     @Column(nullable = false, unique = true)
     private String nombre;
 
+    @Lob
+    @Column(columnDefinition = "LONGTEXT")
+    private String imagen;
+
     public Categoria() {
     }
 
     public Categoria(Long id, String nombre) {
         this.id = id;
         this.nombre = nombre;
+    }
+
+    public Categoria(Long id, String nombre, String imagen) {
+        this.id = id;
+        this.nombre = nombre;
+        this.imagen = imagen;
     }
 
     public Long getId() {
@@ -36,5 +46,13 @@ public class Categoria {
 
     public void setNombre(String nombre) {
         this.nombre = nombre;
+    }
+
+    public String getImagen() {
+        return imagen;
+    }
+
+    public void setImagen(String imagen) {
+        this.imagen = imagen;
     }
 }

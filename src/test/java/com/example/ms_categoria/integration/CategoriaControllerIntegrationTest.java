@@ -58,12 +58,37 @@ class CategoriaControllerIntegrationTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.timestamp").exists())
                 .andExpect(jsonPath("$.status", is(400)))
-                .andExpect(jsonPath("$.error", is("Validación fallida")))
-                .andExpect(jsonPath("$.mensajes.nombre", is("Campo obligatorio")));
+                .andExpect(jsonPath("$.error", is("Bad Request")))
+                .andExpect(jsonPath("$.mensaje", is("Se encontraron errores de validación")))
+                .andExpect(jsonPath("$.ruta", is("/api/categorias")))
+                .andExpect(jsonPath("$.datosRecibidos.nombre", is("")))
+                .andExpect(jsonPath("$.errores.nombre", is("Campo obligatorio")));
     }
 
     @Order(3)
+    @Test
+    @DisplayName("POST /api/categorias - retorna multiples errores de campos reales")
+    void crearCategoria_MultiplesCamposInvalidos_RetornaBadRequest() throws Exception {
+        CategoriaDto dto = new CategoriaDto(null, "", "x".repeat(1001));
+
+        mockMvc.perform(post("/api/categorias")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.timestamp").exists())
+                .andExpect(jsonPath("$.status", is(400)))
+                .andExpect(jsonPath("$.error", is("Bad Request")))
+                .andExpect(jsonPath("$.mensaje", is("Se encontraron errores de validación")))
+                .andExpect(jsonPath("$.ruta", is("/api/categorias")))
+                .andExpect(jsonPath("$.datosRecibidos.nombre", is("")))
+                .andExpect(jsonPath("$.datosRecibidos.imagen", is("x".repeat(1001))))
+                .andExpect(jsonPath("$.errores.nombre", is("Campo obligatorio")))
+                .andExpect(jsonPath("$.errores.imagen", is("No debe superar 1000 caracteres")));
+    }
+
+    @Order(4)
     @Test
     @DisplayName("GET /api/categorias - retorna lista de categorias")
     void listarCategorias_RetornaLista() throws Exception {
@@ -82,7 +107,7 @@ class CategoriaControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(jsonPath("$[0].nombre", is("Adaptadores USB")));
     }
 
-    @Order(4)
+    @Order(5)
     @Test
     @DisplayName("GET /api/categorias/{id} - retorna categoria existente")
     void obtenerCategoria_RetornaCategoria() throws Exception {
@@ -105,7 +130,7 @@ class CategoriaControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(jsonPath("$.nombre", is("Mouse Gaming")));
     }
 
-    @Order(5)
+    @Order(6)
     @Test
     @DisplayName("PUT /api/categorias/{id} - actualiza categoria")
     void actualizarCategoria_RetornaCategoriaActualizada() throws Exception {
@@ -131,7 +156,7 @@ class CategoriaControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(jsonPath("$.nombre", is("Nombre Actualizado")));
     }
 
-    @Order(6)
+    @Order(7)
     @Test
     @DisplayName("PUT /api/categorias/{id} - rechaza nombre nulo")
     void actualizarCategoria_NombreNulo_RetornaBadRequest() throws Exception {
@@ -152,12 +177,77 @@ class CategoriaControllerIntegrationTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dtoActualizado)))
                 .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.timestamp").exists())
                 .andExpect(jsonPath("$.status", is(400)))
-                .andExpect(jsonPath("$.error", is("Validación fallida")))
-                .andExpect(jsonPath("$.mensajes.nombre", is("Campo obligatorio")));
+                .andExpect(jsonPath("$.error", is("Bad Request")))
+                .andExpect(jsonPath("$.mensaje", is("Se encontraron errores de validación")))
+                .andExpect(jsonPath("$.ruta", is("/api/categorias/" + creada.getId())))
+                .andExpect(jsonPath("$.errores.nombre", is("Campo obligatorio")));
     }
 
-    @Order(7)
+    @Order(8)
+    @Test
+    @DisplayName("POST /api/categorias - rechaza tipo de dato invalido")
+    void crearCategoria_TipoDatoInvalido_RetornaBadRequest() throws Exception {
+        String body = """
+                {
+                  "id": "abc",
+                  "nombre": "Cables USB",
+                  "imagen": "imagen.png"
+                }
+                """;
+
+        mockMvc.perform(post("/api/categorias")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.timestamp").exists())
+                .andExpect(jsonPath("$.status", is(400)))
+                .andExpect(jsonPath("$.error", is("Bad Request")))
+                .andExpect(jsonPath("$.mensaje", is("Se encontraron errores de validación")))
+                .andExpect(jsonPath("$.ruta", is("/api/categorias")))
+                .andExpect(jsonPath("$.datosRecibidos.id", is("abc")))
+                .andExpect(jsonPath("$.datosRecibidos.nombre", is("Cables USB")))
+                .andExpect(jsonPath("$.errores.id", is("Tipo de dato inválido o estructura incorrecta")));
+    }
+
+    @Order(9)
+    @Test
+    @DisplayName("GET /api/categorias/{id} - retorna 404 uniforme")
+    void obtenerCategoria_NoExiste_RetornaNotFound() throws Exception {
+        mockMvc.perform(get("/api/categorias/{id}", 99999L)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.timestamp").exists())
+                .andExpect(jsonPath("$.status", is(404)))
+                .andExpect(jsonPath("$.error", is("Not Found")))
+                .andExpect(jsonPath("$.mensaje", is("No se encontró el recurso solicitado")))
+                .andExpect(jsonPath("$.ruta", is("/api/categorias/99999")));
+    }
+
+    @Order(10)
+    @Test
+    @DisplayName("POST /api/categorias - retorna 409 uniforme por duplicado")
+    void crearCategoria_Duplicada_RetornaConflict() throws Exception {
+        CategoriaDto dto = new CategoriaDto(null, "Categoria Duplicada");
+
+        mockMvc.perform(post("/api/categorias")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/categorias")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.timestamp").exists())
+                .andExpect(jsonPath("$.status", is(409)))
+                .andExpect(jsonPath("$.error", is("Conflict")))
+                .andExpect(jsonPath("$.mensaje", is("El registro ya existe o genera conflicto")))
+                .andExpect(jsonPath("$.ruta", is("/api/categorias")));
+    }
+
+    @Order(11)
     @Test
     @DisplayName("DELETE /api/categorias/{id} - elimina categoria")
     void eliminarCategoria_RetornaNoContent() throws Exception {
@@ -175,5 +265,18 @@ class CategoriaControllerIntegrationTest extends BaseIntegrationTest {
 
         mockMvc.perform(delete("/api/categorias/{id}", creada.getId()))
                 .andExpect(status().isNoContent());
+    }
+
+    @Order(12)
+    @Test
+    @DisplayName("DELETE /api/categorias/{id} - retorna 404 uniforme")
+    void eliminarCategoria_NoExiste_RetornaNotFound() throws Exception {
+        mockMvc.perform(delete("/api/categorias/{id}", 99999L))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.timestamp").exists())
+                .andExpect(jsonPath("$.status", is(404)))
+                .andExpect(jsonPath("$.error", is("Not Found")))
+                .andExpect(jsonPath("$.mensaje", is("No se encontró el recurso solicitado")))
+                .andExpect(jsonPath("$.ruta", is("/api/categorias/99999")));
     }
 }

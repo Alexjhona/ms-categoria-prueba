@@ -2,6 +2,8 @@ package com.example.ms_categoria.service.impl;
 
 import com.example.ms_categoria.dto.CategoriaDto;
 import com.example.ms_categoria.entity.Categoria;
+import com.example.ms_categoria.exception.ConflictoRecursoException;
+import com.example.ms_categoria.exception.RecursoNoEncontradoException;
 import com.example.ms_categoria.repository.CategoriaRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -32,6 +34,7 @@ class CategoriaServiceImplTest {
     void crearCategoria_GuardaCorrectamente() {
         CategoriaDto entrada = new CategoriaDto(null, "Cables USB");
 
+        when(categoriaRepository.existsByNombre("Cables USB")).thenReturn(false);
         when(categoriaRepository.save(any(Categoria.class))).thenAnswer(invocation -> {
             Categoria categoria = invocation.getArgument(0);
             categoria.setId(1L);
@@ -44,6 +47,24 @@ class CategoriaServiceImplTest {
         assertThat(resultado.getNombre()).isEqualTo("Cables USB");
 
         verify(categoriaRepository).save(any(Categoria.class));
+    }
+
+    @Test
+    @DisplayName("Crear categoría - lanza conflicto si el nombre ya existe")
+    void crearCategoria_NombreDuplicado_LanzaConflicto() {
+        CategoriaDto entrada = new CategoriaDto(null, "Cables USB");
+
+        when(categoriaRepository.existsByNombre("Cables USB")).thenReturn(true);
+
+        ConflictoRecursoException exception = assertThrows(
+                ConflictoRecursoException.class,
+                () -> categoriaService.crearCategoria(entrada)
+        );
+
+        assertThat(exception.getMessage()).contains("Ya existe");
+
+        verify(categoriaRepository).existsByNombre("Cables USB");
+        verify(categoriaRepository, never()).save(any(Categoria.class));
     }
 
     @Test
@@ -66,8 +87,8 @@ class CategoriaServiceImplTest {
     void obtenerCategoria_NoExiste_LanzaExcepcion() {
         when(categoriaRepository.findById(99L)).thenReturn(Optional.empty());
 
-        IllegalArgumentException exception = assertThrows(
-                IllegalArgumentException.class,
+        RecursoNoEncontradoException exception = assertThrows(
+                RecursoNoEncontradoException.class,
                 () -> categoriaService.obtenerCategoria(99L)
         );
 
@@ -102,6 +123,7 @@ class CategoriaServiceImplTest {
         CategoriaDto entrada = new CategoriaDto(null, "Nombre Nuevo");
 
         when(categoriaRepository.findById(1L)).thenReturn(Optional.of(existente));
+        when(categoriaRepository.existsByNombreAndIdNot("Nombre Nuevo", 1L)).thenReturn(false);
         when(categoriaRepository.save(any(Categoria.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         CategoriaDto resultado = categoriaService.actualizarCategoria(1L, entrada);
@@ -120,14 +142,35 @@ class CategoriaServiceImplTest {
 
         when(categoriaRepository.findById(99L)).thenReturn(Optional.empty());
 
-        IllegalArgumentException exception = assertThrows(
-                IllegalArgumentException.class,
+        RecursoNoEncontradoException exception = assertThrows(
+                RecursoNoEncontradoException.class,
                 () -> categoriaService.actualizarCategoria(99L, entrada)
         );
 
         assertThat(exception.getMessage()).contains("Categoría no encontrada");
 
         verify(categoriaRepository).findById(99L);
+        verify(categoriaRepository, never()).save(any(Categoria.class));
+    }
+
+    @Test
+    @DisplayName("Actualizar categoría - lanza conflicto si el nombre pertenece a otro registro")
+    void actualizarCategoria_NombreDuplicado_LanzaConflicto() {
+        Categoria existente = new Categoria(1L, "Nombre Antiguo");
+        CategoriaDto entrada = new CategoriaDto(null, "Nombre Existente");
+
+        when(categoriaRepository.findById(1L)).thenReturn(Optional.of(existente));
+        when(categoriaRepository.existsByNombreAndIdNot("Nombre Existente", 1L)).thenReturn(true);
+
+        ConflictoRecursoException exception = assertThrows(
+                ConflictoRecursoException.class,
+                () -> categoriaService.actualizarCategoria(1L, entrada)
+        );
+
+        assertThat(exception.getMessage()).contains("Ya existe");
+
+        verify(categoriaRepository).findById(1L);
+        verify(categoriaRepository).existsByNombreAndIdNot("Nombre Existente", 1L);
         verify(categoriaRepository, never()).save(any(Categoria.class));
     }
 
@@ -147,8 +190,8 @@ class CategoriaServiceImplTest {
     void eliminarCategoria_NoExiste_LanzaExcepcion() {
         when(categoriaRepository.existsById(99L)).thenReturn(false);
 
-        IllegalArgumentException exception = assertThrows(
-                IllegalArgumentException.class,
+        RecursoNoEncontradoException exception = assertThrows(
+                RecursoNoEncontradoException.class,
                 () -> categoriaService.eliminarCategoria(99L)
         );
 

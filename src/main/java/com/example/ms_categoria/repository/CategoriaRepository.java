@@ -9,4 +9,6 @@ import java.util.List;
 @Repository
 public interface CategoriaRepository extends JpaRepository<Categoria, Long> {
     List<Categoria> findAllByOrderByIdAsc();
+    boolean existsByNombre(String nombre);
+    boolean existsByNombreAndIdNot(String nombre, Long id);
 }
