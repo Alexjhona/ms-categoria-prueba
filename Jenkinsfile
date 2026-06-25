@@ -1,10 +1,6 @@
 pipeline {
     agent any
 
-    tools {
-        maven 'MAVEN_HOME'
-    }
-
     environment {
         SONAR_TOKEN = credentials('Sonarqube')
 
@@ -21,7 +17,8 @@ pipeline {
         stage('Build') {
             steps {
                 timeout(time: 8, unit: 'MINUTES') {
-                    sh "mvn -DskipTests clean package -f ${POM_PATH}"
+                    sh 'chmod +x mvnw'
+                    sh "./mvnw -DskipTests clean package -f ${POM_PATH}"
                 }
             }
         }
@@ -29,7 +26,7 @@ pipeline {
         stage('Test') {
             steps {
                 timeout(time: 15, unit: 'MINUTES') {
-                    sh "mvn clean verify -f ${POM_PATH}"
+                    sh "./mvnw clean verify -f ${POM_PATH}"
                 }
             }
 
@@ -46,7 +43,7 @@ pipeline {
                 timeout(time: 8, unit: 'MINUTES') {
                     withSonarQubeEnv('sonarqube') {
                         sh """
-                            mvn sonar:sonar \
+                            ./mvnw sonar:sonar \
                                 -Dsonar.projectKey=ms-categoria \
                                 -Dsonar.projectName=ms-categoria \
                                 -Dsonar.token=${SONAR_TOKEN} \
