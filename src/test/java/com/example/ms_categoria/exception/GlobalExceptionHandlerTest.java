@@ -287,7 +287,7 @@ class GlobalExceptionHandlerTest {
 
     @Test
     @DisplayName("GlobalExceptionHandler - lee body con UTF-8 por defecto")
-    void handleInvalidBody_LeeBodyConUtf8PorDefecto() throws Exception {
+    void handleInvalidBody_LeeBodyConUtf8PorDefecto() {
         org.springframework.web.util.ContentCachingRequestWrapper wrapper =
                 mock(org.springframework.web.util.ContentCachingRequestWrapper.class);
         when(wrapper.getContentAsByteArray()).thenReturn("{\"nombre\":".getBytes(StandardCharsets.UTF_8));
@@ -361,11 +361,13 @@ class GlobalExceptionHandlerTest {
         }
 
         @GetMapping("/requiere-parametro")
-        void requiereParametro(@RequestParam String nombre) {
+        String requiereParametro(@RequestParam String nombre) {
+            return nombre;
         }
 
         @GetMapping("/por-id/{id}")
-        void porId(@PathVariable Long id) {
+        Long porId(@PathVariable Long id) {
+            return id;
         }
     }
 }
