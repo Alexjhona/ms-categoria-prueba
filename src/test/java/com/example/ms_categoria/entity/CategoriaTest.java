@@ -14,9 +14,11 @@ class CategoriaTest {
         Categoria categoria = new Categoria();
         categoria.setId(1L);
         categoria.setNombre("Cargadores Móvil");
+        categoria.setImagen("imagen.png");
 
         assertEquals(1L, categoria.getId());
         assertEquals("Cargadores Móvil", categoria.getNombre());
+        assertEquals("imagen.png", categoria.getImagen());
     }
 
     @Test
@@ -35,5 +37,16 @@ class CategoriaTest {
 
         assertNull(categoria.getId());
         assertNull(categoria.getNombre());
+        assertNull(categoria.getImagen());
+    }
+
+    @Test
+    @DisplayName("Categoria - constructor con imagen")
+    void categoria_ConstructorConImagen() {
+        Categoria categoria = new Categoria(3L, "Teclados", "teclado.png");
+
+        assertEquals(3L, categoria.getId());
+        assertEquals("Teclados", categoria.getNombre());
+        assertEquals("teclado.png", categoria.getImagen());
     }
 }
